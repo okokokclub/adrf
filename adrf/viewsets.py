@@ -5,6 +5,8 @@ from django.utils.decorators import classonlymethod
 from django.utils.functional import classproperty
 
 from adrf.views import APIView
+from adrf import generics
+from adrf import mixins
 from rest_framework.viewsets import ViewSetMixin as DRFViewSetMixin
 
 
@@ -151,3 +153,25 @@ class ViewSet(ViewSetMixin, APIView):
             if callable(function) and not name.startswith("__")
         ]
         return any(result)
+
+
+class GenericViewSet(ViewSetMixin, generics.GenericAPIView):
+    """
+    The GenericViewSet class does not provide any actions by default,
+    but does include the base set of generic view behavior, such as
+    the `get_object` and `get_queryset` methods.
+    """
+    pass
+
+
+class ModelViewSet(mixins.CreateModelMixin,
+                   mixins.RetrieveModelMixin,
+                   mixins.UpdateModelMixin,
+                   mixins.DestroyModelMixin,
+                   mixins.ListModelMixin,
+                   GenericViewSet):
+    """
+    A viewset that provides default `create()`, `retrieve()`, `update()`,
+    `partial_update()`, `destroy()` and `list()` actions.
+    """
+    pass
