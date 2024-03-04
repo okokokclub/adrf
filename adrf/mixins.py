@@ -74,7 +74,7 @@ class UpdateModelMixin(mixins.UpdateModelMixin):
         partial = kwargs.pop('partial', False)
         instance = await self.aget_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
+        await sync_to_async(serializer.is_valid)(raise_exception=True)
         await self.aperform_update(serializer)
 
         if getattr(instance, '_prefetched_objects_cache', None):

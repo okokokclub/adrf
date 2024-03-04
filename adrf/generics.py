@@ -220,15 +220,8 @@ class GenericAPIView(views.APIView):
 
     @classproperty
     def view_is_async(cls):
-        """
-        Checks whether any methods are coroutines.
-        """
-        result = [
-            asyncio.iscoroutinefunction(function)
-            for name, function in cls.__dict__.items()
-            if callable(function) and not name.startswith("__")
-        ]
-        return any(result)
+        # Since we're using the async version, we'll save some cycle and tell Django that this view is async.
+        return True
 
 
 class RetrieveAPIView(mixins.RetrieveModelMixin,
@@ -239,3 +232,30 @@ class RetrieveAPIView(mixins.RetrieveModelMixin,
 
     async def get(self, request, *args, **kwargs):
         return await self.retrieve(request, *args, **kwargs)
+
+
+class ListAPIView(mixins.ListModelMixin,
+                  GenericAPIView):
+    """
+    Concrete view for listing a queryset.
+    """
+
+    async def get(self, request, *args, **kwargs):
+        return await self.list(request, *args, **kwargs)
+
+
+class RetrieveUpdateAPIView(mixins.RetrieveModelMixin,
+                            mixins.UpdateModelMixin,
+                            GenericAPIView):
+    """
+    Concrete view for retrieving, updating a model instance.
+    """
+
+    async def get(self, request, *args, **kwargs):
+        return await self.retrieve(request, *args, **kwargs)
+
+    async def put(self, request, *args, **kwargs):
+        return await self.update(request, *args, **kwargs)
+
+    async def patch(self, request, *args, **kwargs):
+        return await self.partial_update(request, *args, **kwargs)
