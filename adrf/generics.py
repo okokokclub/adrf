@@ -224,6 +224,34 @@ class GenericAPIView(views.APIView):
         return True
 
 
+class CreateDestroyAPIView(mixins.CreateModelMixin,
+                           mixins.DestroyModelMixin,
+                           GenericAPIView):
+    """
+    Concrete view for creating or deleting a model instance.
+    """
+
+    async def post(self, request, *args, **kwargs):
+        return await self.create(request, *args, **kwargs)
+
+    async def delete(self, request, *args, **kwargs):
+        return await self.destroy(request, *args, **kwargs)
+
+
+class RetrieveDestroyAPIView(mixins.RetrieveModelMixin,
+                             mixins.DestroyModelMixin,
+                             GenericAPIView):
+    """
+    Concrete view for retrieving or deleting a model instance.
+    """
+
+    async def get(self, request, *args, **kwargs):
+        return await self.retrieve(request, *args, **kwargs)
+
+    async def delete(self, request, *args, **kwargs):
+        return await self.destroy(request, *args, **kwargs)
+
+
 class RetrieveAPIView(mixins.RetrieveModelMixin,
                       GenericAPIView):
     """

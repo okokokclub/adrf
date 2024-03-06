@@ -8,6 +8,11 @@ class ManyRelatedField(relations.ManyRelatedField):
             self.child_relation.to_representation(value)
             async for value in iterable
         ]
-    #
-    # async def to_internal_value(self, data):
-    #     return await super().to_internal_value(data)
+
+
+class PrimaryKeyRelatedField(relations.PrimaryKeyRelatedField):
+
+    async def ato_representation(self, value):
+        if self.pk_field is not None:
+            return await self.pk_field.ato_representation(value.pk)
+        return value.pk
