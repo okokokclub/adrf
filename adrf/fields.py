@@ -1,5 +1,3 @@
-import asyncio
-
 from rest_framework.fields import SerializerMethodField as DRFSerializerMethodField
 
 
