@@ -272,6 +272,20 @@ class ListAPIView(mixins.ListModelMixin,
         return await self.list(request, *args, **kwargs)
 
 
+class CreateListAPIView(mixins.CreateModelMixin,
+                        mixins.ListModelMixin,
+                        GenericAPIView):
+    """
+    Concrete view for creating a model instance or listing a queryset.
+    """
+
+    async def post(self, request, *args, **kwargs):
+        return await self.create(request, *args, **kwargs)
+
+    async def get(self, request, *args, **kwargs):
+        return await self.list(request, *args, **kwargs)
+
+
 class RetrieveUpdateAPIView(mixins.RetrieveModelMixin,
                             mixins.UpdateModelMixin,
                             GenericAPIView):
