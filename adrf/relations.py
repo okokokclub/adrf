@@ -1,12 +1,18 @@
+from typing import Iterable
+
+from django.db import models
 from rest_framework import relations
 
 
 class ManyRelatedField(relations.ManyRelatedField):
 
-    async def ato_representation(self, iterable):
+    async def ato_representation(self, iterable: Iterable | models.QuerySet):
+        objects = iterable
+        if isinstance(iterable, models.QuerySet):
+            objects = [obj async for obj in iterable]
         return [
-            self.child_relation.to_representation(value)
-            async for value in iterable
+            self.child_relation.to_representation(obj)
+            for obj in objects
         ]
 
 
