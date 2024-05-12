@@ -4,7 +4,9 @@ from django.http import HttpResponse
 from django.test import TestCase, override_settings
 
 from adrf.views import APIView
+from adrf.decorators import api_view
 from rest_framework import permissions, status
+from rest_framework.decorators import permission_classes, authentication_classes
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.test import APIRequestFactory
@@ -34,7 +36,7 @@ class AsyncAuthentication(BaseAuthentication):
         if not auth.startswith(self.keyword):
             return None
 
-        token = auth[len(self.keyword):].strip()
+        token = auth[len(self.keyword) :].strip()
 
         if token != "admitme":
             raise AuthenticationFailed("Invalid token")
@@ -53,20 +55,37 @@ class MockView(APIView):
         return HttpResponse({"a": 1, "b": 2, "c": 3})
 
 
+@api_view(("GET",))
+@permission_classes([permissions.IsAuthenticated])
+@authentication_classes([AsyncAuthentication])
+async def mock_view_func(request):
+    return HttpResponse({"a": 1, "b": 2, "c": 3})
+
+
 @override_settings(ROOT_URLCONF=__name__)
 class TestAsyncAuthentication(TestCase):
-    async def test_admit_customtoken(self):
+    async def test_admit_customtoken_class_view(self):
         auth = "Bearer admitme"
         request = factory.get("/view/", HTTP_AUTHORIZATION=auth)
-
         response = await MockView.as_view()(request)
-
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(request.user, faked_user)
 
-    async def test_reject_customtoken(self):
+    async def test_reject_customtoken_class_view(self):
         auth = "Bearer expired"
         request = factory.get("/view/", HTTP_AUTHORIZATION=auth)
-
         response = await MockView.as_view()(request)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    async def test_admit_customtoken_func_view(self):
+        auth = "Bearer admitme"
+        request = factory.get("/view/", HTTP_AUTHORIZATION=auth)
+        response = await mock_view_func(request)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(request.user, faked_user)
+
+    async def test_reject_customtoken_func_view(self):
+        auth = "Bearer expired"
+        request = factory.get("/view/", HTTP_AUTHORIZATION=auth)
+        response = await mock_view_func(request)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

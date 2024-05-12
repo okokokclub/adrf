@@ -38,9 +38,7 @@ class APIView(DRFAPIView):
         except Exception as exc:
             response = self.handle_exception(exc)
 
-        self.response = self.finalize_response(
-            request, response, *args, **kwargs
-        )
+        self.response = self.finalize_response(request, response, *args, **kwargs)
         return self.response
 
     async def async_dispatch(self, request, *args, **kwargs):
@@ -69,16 +67,12 @@ class APIView(DRFAPIView):
             if asyncio.iscoroutinefunction(handler):
                 response = await handler(request, *args, **kwargs)
             else:
-                response = await sync_to_async(handler)(
-                    request, *args, **kwargs
-                )
+                response = await sync_to_async(handler)(request, *args, **kwargs)
 
         except Exception as exc:
             response = self.handle_exception(exc)
 
-        self.response = self.finalize_response(
-            request, response, *args, **kwargs
-        )
+        self.response = self.finalize_response(request, response, *args, **kwargs)
         return self.response
 
     def dispatch(self, request, *args, **kwargs):
@@ -120,9 +114,7 @@ class APIView(DRFAPIView):
                 sync_permissions.append(permission)
 
         if async_permissions:
-            async_to_sync(self.check_async_permissions)(
-                request, async_permissions
-            )
+            async_to_sync(self.check_async_permissions)(request, async_permissions)
 
         if sync_permissions:
             self.check_sync_permissions(request, sync_permissions)
@@ -136,11 +128,8 @@ class APIView(DRFAPIView):
         """
 
         has_permissions = await asyncio.gather(
-            *[
-                permission.has_permission(request, self)
-                for permission in permissions
-            ],
-            return_exceptions=True
+            *[permission.has_permission(request, self) for permission in permissions],
+            return_exceptions=True,
         )
 
         for has_permission in has_permissions:
@@ -169,6 +158,70 @@ class APIView(DRFAPIView):
                     code=getattr(permission, "code", None),
                 )
 
+    def check_object_permissions(self, request: Request, obj) -> None:
+        permissions = self.get_permissions()
+
+        if not permissions:
+            return
+
+        sync_permissions, async_permissions = [], []
+
+        for permission in permissions:
+            if asyncio.iscoroutinefunction(permission.has_object_permission):
+                async_permissions.append(permission)
+            else:
+                sync_permissions.append(permission)
+
+        if async_permissions:
+            async_to_sync(self.check_async_object_permissions)(
+                request, async_permissions, obj
+            )
+
+        if sync_permissions:
+            self.check_sync_object_permissions(request, sync_permissions, obj)
+
+    async def check_async_object_permissions(
+        self, request: AsyncRequest, permissions: List[BasePermission], obj
+    ) -> None:
+        """
+        Check if the request should be permitted asynchronously.
+        Raises an appropriate exception if the request is not permitted.
+        """
+
+        has_object_permissions = await asyncio.gather(
+            *[
+                permission.has_object_permission(request, self, obj)
+                for permission in permissions
+            ],
+            return_exceptions=True,
+        )
+
+        for has_object_permission in has_object_permissions:
+            if isinstance(has_object_permission, Exception):
+                raise has_object_permission
+            elif not has_object_permission:
+                self.permission_denied(
+                    request,
+                    message=getattr(has_object_permission, "detail", None),
+                    code=getattr(has_object_permission, "code", None),
+                )
+
+    def check_sync_object_permissions(
+        self, request: Request, permissions: List[BasePermission], obj
+    ) -> None:
+        """
+        Check if the request should be permitted synchronously.
+        Raises an appropriate exception if the request is not permitted.
+        """
+
+        for permission in permissions:
+            if not permission.has_object_permission(request, self, obj):
+                self.permission_denied(
+                    request,
+                    message=getattr(permission, "detail", None),
+                    code=getattr(permission, "code", None),
+                )
+
     def check_throttles(self, request: Request) -> None:
         """
         Check if the request should be throttled.
@@ -189,9 +242,7 @@ class APIView(DRFAPIView):
             else:
                 sync_throttles.append(throttle)
 
-        throttle_durations.extend(
-            self.check_sync_throttles(request, sync_throttles)
-        )
+        throttle_durations.extend(self.check_sync_throttles(request, sync_throttles))
 
         throttle_durations.extend(
             async_to_sync(self.check_async_throttles)(request, async_throttles)
@@ -201,9 +252,7 @@ class APIView(DRFAPIView):
             # Filter out `None` values which may happen in case of config / rate
             # changes, see #1438
             durations = [
-                duration
-                for duration in throttle_durations
-                if duration is not None
+                duration for duration in throttle_durations if duration is not None
             ]
 
             duration = max(durations, default=None)
